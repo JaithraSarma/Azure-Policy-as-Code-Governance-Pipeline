@@ -1,0 +1,148 @@
+##############################################################################
+# Azure Policy Gate — CI Pipeline
+#
+# Triggers on pull requests that modify files under terraform/**
+# 1. Installs Python dependencies & Terraform CLI
+# 2. Runs terraform init + plan → produces tfplan.json
+# 3. Runs the Python policy engine against the plan
+# 4. Posts violations as a PR comment via Azure DevOps REST API
+# 5. Logs violations to Azure Table Storage
+# 6. Fails the pipeline if HIGH severity violations are found
+##############################################################################
+
+trigger: none  # Only runs on PRs, not pushes
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - terraform/**
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  # ── Terraform ───────────────────────────────────────────────────────
+  TF_WORKING_DIR: "terraform/demo"
+  ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+  ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+  ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+  # ── Policy Engine ──────────────────────────────────────────────────
+  PYTHON_VERSION: "3.11"
+  VIOLATIONS_TABLE_NAME: "PolicyViolations"
+
+stages:
+  # ════════════════════════════════════════════════════════════════════
+  # Stage 1 — Terraform Plan
+  # ════════════════════════════════════════════════════════════════════
+  - stage: TerraformPlan
+    displayName: "Terraform Plan"
+    jobs:
+      - job: Plan
+        displayName: "Init → Plan → JSON"
+        steps:
+          # ── Checkout ─────────────────────────────────────────────────
+          - checkout: self
+            fetchDepth: 1
+
+          # ── Install Terraform ────────────────────────────────────────
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
+
+          # ── Terraform Init ───────────────────────────────────────────
+          - script: |
+              terraform init \
+                -backend-config="resource_group_name=rg-policy-gate-backend" \
+                -backend-config="storage_account_name=stpolicygatestate" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=demo.terraform.tfstate" \
+                -input=false
+            displayName: "Terraform Init"
+            workingDirectory: $(TF_WORKING_DIR)
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+          # ── Terraform Plan → binary ──────────────────────────────────
+          - script: |
+              terraform plan -out=tfplan.bin -input=false -detailed-exitcode || true
+            displayName: "Terraform Plan"
+            workingDirectory: $(TF_WORKING_DIR)
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+          # ── Convert to JSON ──────────────────────────────────────────
+          - script: |
+              terraform show -json tfplan.bin > tfplan.json
+              echo "Plan JSON size: $(wc -c < tfplan.json) bytes"
+            displayName: "Convert Plan to JSON"
+            workingDirectory: $(TF_WORKING_DIR)
+
+          # ── Publish as artifact ──────────────────────────────────────
+          - publish: $(TF_WORKING_DIR)/tfplan.json
+            artifact: tfplan
+            displayName: "Publish Plan JSON"
+
+  # ════════════════════════════════════════════════════════════════════
+  # Stage 2 — Policy Check
+  # ════════════════════════════════════════════════════════════════════
+  - stage: PolicyCheck
+    displayName: "Policy Check"
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    jobs:
+      - job: Evaluate
+        displayName: "Run Policy Engine"
+        steps:
+          # ── Download plan artifact ───────────────────────────────────
+          - download: current
+            artifact: tfplan
+            displayName: "Download Plan JSON"
+
+          # ── Set up Python ────────────────────────────────────────────
+          - task: UsePythonVersion@0
+            displayName: "Use Python $(PYTHON_VERSION)"
+            inputs:
+              versionSpec: $(PYTHON_VERSION)
+
+          # ── Install dependencies ─────────────────────────────────────
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+            displayName: "Install Python Dependencies"
+
+          # ── Run policy engine ────────────────────────────────────────
+          - script: |
+              python -m policy_engine.main $(Pipeline.Workspace)/tfplan/tfplan.json
+            displayName: "Evaluate Policies"
+            env:
+              # Azure DevOps PR variables (auto-populated in PR context)
+              SYSTEM_TEAMFOUNDATIONCOLLECTIONURI: $(System.TeamFoundationCollectionUri)
+              SYSTEM_TEAMPROJECT: $(System.TeamProject)
+              BUILD_REPOSITORY_ID: $(Build.Repository.ID)
+              BUILD_REPOSITORY_NAME: $(Build.Repository.Name)
+              SYSTEM_PULLREQUEST_PULLREQUESTID: $(System.PullRequest.PullRequestId)
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              # Table Storage
+              AZURE_STORAGE_CONNECTION_STRING: $(AZURE_STORAGE_CONNECTION_STRING)
+              VIOLATIONS_TABLE_NAME: $(VIOLATIONS_TABLE_NAME)
+              # Report output path
+              POLICY_REPORT_PATH: $(Build.ArtifactStagingDirectory)/policy-report.md
+
+          # ── Publish report ───────────────────────────────────────────
+          - publish: $(Build.ArtifactStagingDirectory)/policy-report.md
+            artifact: policy-report
+            displayName: "Publish Policy Report"
+            condition: always()
