@@ -36,10 +36,6 @@ variables:
   - name: VIOLATIONS_TABLE_NAME
     value: "PolicyViolations"
 
-  # ── Policy Engine ──────────────────────────────────────────────────
-  PYTHON_VERSION: "3.11"
-  VIOLATIONS_TABLE_NAME: "PolicyViolations"
-
 stages:
   # ════════════════════════════════════════════════════════════════════
   # Stage 1 — Terraform Plan
