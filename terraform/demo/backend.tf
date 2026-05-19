@@ -6,7 +6,7 @@
 terraform {
   backend "azurerm" {
     resource_group_name  = "rg-policy-gate-backend"
-    storage_account_name = "stpolicygatejaith01"
+    storage_account_name = "<YOUR_STORAGE_ACCOUNT_NAME>"
     container_name       = "tfstate"
     key                  = "demo.terraform.tfstate"
   }

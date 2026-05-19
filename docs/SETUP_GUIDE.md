@@ -46,20 +46,21 @@ az account set --subscription "<YOUR_SUBSCRIPTION_ID>"
 az ad sp create-for-rbac \
   --name "sp-policy-gate-pipeline" \
   --role Contributor \
-  --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID> \
-  --sdk-auth
+  --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID>
 ```
 
 **Save the output** — you will need these values:
 
 ```json
 {
-  "clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "clientSecret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "subscriptionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  "appId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "displayName": "sp-policy-gate-pipeline",
+  "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "tenant": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
+
+> **Note:** `appId` is your Client ID, `password` is your Client Secret, and `tenant` is your Tenant ID.
 
 ---
 
@@ -74,24 +75,24 @@ cd terraform/backend
 terraform init
 
 # Review the plan
-terraform plan -var="storage_account_name=stpolicygatestate" \
+terraform plan -var="storage_account_name=<YOUR_STORAGE_ACCOUNT_NAME>" \
                -var="owner=your-name" \
                -var="cost_centre=CC-001"
 
 # Apply
 terraform apply -auto-approve \
-  -var="storage_account_name=stpolicygatestate" \
+  -var="storage_account_name=<YOUR_STORAGE_ACCOUNT_NAME>" \
   -var="owner=your-name" \
   -var="cost_centre=CC-001"
 ```
 
-> **Important:** The `storage_account_name` must be globally unique across all of Azure. If `stpolicygatestate` is taken, choose a different name and update `terraform/demo/backend.tf` accordingly.
+> **Important:** The `storage_account_name` must be globally unique across all of Azure (3-24 lowercase alphanumeric characters). Choose a unique name and update `terraform/demo/backend.tf` accordingly.
 
 ### Get the Storage Connection String
 
 ```bash
 az storage account show-connection-string \
-  --name stpolicygatestate \
+  --name <YOUR_STORAGE_ACCOUNT_NAME> \
   --resource-group rg-policy-gate-backend \
   --query connectionString -o tsv
 ```
@@ -119,7 +120,7 @@ git push -u origin main
 
 ## 5. Create the Service Connection
 
-This allows the pipeline to authenticate with Azure:
+This allows the pipeline to authenticate with Azure. **Use manual Service Principal key authentication** (Workload Identity Federation may require additional Entra ID configuration).
 
 1. In Azure DevOps, go to **Project Settings** → **Service connections**
 2. Click **New service connection** → **Azure Resource Manager**
@@ -128,21 +129,25 @@ This allows the pipeline to authenticate with Azure:
 
 | Field | Value |
 |-------|-------|
-| Subscription ID | `<subscriptionId>` from SP output |
+| Subscription ID | Your Azure Subscription ID |
 | Subscription Name | Your subscription name |
-| Service Principal ID | `<clientId>` from SP output |
-| Service Principal Key | `<clientSecret>` from SP output |
-| Tenant ID | `<tenantId>` from SP output |
-| Service Connection Name | `azure-policy-gate-sc` |
+| Service Principal ID | `appId` from SP output (Client ID) |
+| Service Principal Key | `password` from SP output (Client Secret) |
+| Tenant ID | `tenant` from SP output |
+| Service Connection Name | `azure-policy-gate-sc1` |
 
 5. Check **Grant access permission to all pipelines**
 6. Click **Verify and save**
+
+> **Why manual?** Automatic Workload Identity Federation requires configuring federated credentials in Microsoft Entra ID. Manual SP key authentication is simpler and works out of the box.
 
 ---
 
 ## 6. Configure Pipeline Variables
 
-The pipeline needs several secret variables. Configure them in Azure DevOps:
+### Create a Variable Group
+
+The pipeline references a variable group for secrets. Create it:
 
 1. Go to **Pipelines** → **Library** → **+ Variable group**
 2. Create a group named `policy-gate-vars`
@@ -150,38 +155,29 @@ The pipeline needs several secret variables. Configure them in Azure DevOps:
 
 | Variable | Value | Secret? |
 |----------|-------|---------|
-| `ARM_SUBSCRIPTION_ID` | Your Azure subscription ID | No |
-| `ARM_CLIENT_ID` | Service Principal client ID | No |
-| `ARM_CLIENT_SECRET` | Service Principal secret | ✅ Yes |
-| `ARM_TENANT_ID` | Azure AD tenant ID | No |
+| `ARM_SUBSCRIPTION_ID` | Your Azure Subscription ID | No |
+| `ARM_CLIENT_ID` | Service Principal Client ID (`appId`) | No |
+| `ARM_CLIENT_SECRET` | Service Principal Secret (`password`) | ✅ Yes |
+| `ARM_TENANT_ID` | Azure AD Tenant ID (`tenant`) | No |
 | `AZURE_STORAGE_CONNECTION_STRING` | Connection string from Step 3 | ✅ Yes |
 
 4. Save the variable group
 
-### Link Variable Group to Pipeline
-
-Edit `azure-pipelines.yml` and add under the `variables` section:
-
-```yaml
-variables:
-  - group: policy-gate-vars
-  # ... existing variables ...
-```
-
-Alternatively, set these variables directly in the pipeline settings UI:
-- **Pipelines** → select pipeline → **Edit** → **Variables**
+> **Important:** The pipeline YAML already references `- group: policy-gate-vars` in the variables section. The variable group name must match exactly.
 
 ### Enable System.AccessToken
 
 The pipeline uses `$(System.AccessToken)` to post PR comments. Ensure it has the right permissions:
 
 1. Go to **Project Settings** → **Repositories** → select your repo
-2. Under **Security**, find **Build Service** user
+2. Under **Security**, find the **Build Service** user
 3. Grant **Contribute to pull requests** permission
 
 ---
 
 ## 7. Create the Pipeline
+
+> **Note:** The pipeline installs Terraform via a shell script (no marketplace extension required). If you prefer to use the Microsoft DevLabs Terraform extension instead, install it from the [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=ms-devlabs.custom-terraform-tasks) and replace the install step in `azure-pipelines.yml` with `TerraformInstaller@1`.
 
 1. Go to **Pipelines** → **New Pipeline**
 2. Select **Azure Repos Git**
@@ -246,7 +242,7 @@ The PR can only merge when:
 # Create a feature branch
 git checkout -b test/policy-violations
 
-# The demo infrastructure already has violations — 
+# The demo infrastructure already has violations —
 # just make a small change to trigger the pipeline
 echo "# trigger" >> terraform/demo/main.tf
 
@@ -261,7 +257,7 @@ Then create a PR in Azure DevOps targeting `main`. The pipeline should:
 1. ✅ Run automatically
 2. ✅ Detect violations in the demo infrastructure
 3. ✅ Post a comment with the violation table
-4. ❌ Fail the pipeline (because HIGH violations exist)
+4. ❌ Fail the pipeline (because HIGH violations exist) — **this is intentional**
 5. 🚫 Block the PR from merging
 
 ### Verify Table Storage
@@ -269,9 +265,27 @@ Then create a PR in Azure DevOps targeting `main`. The pipeline should:
 ```bash
 az storage entity query \
   --table-name PolicyViolations \
-  --account-name stpolicygatestate \
+  --account-name <YOUR_STORAGE_ACCOUNT_NAME> \
   --query "items[].{PR:PRNumber, Rule:RuleId, Severity:Severity, Outcome:Outcome}"
 ```
+
+---
+
+## Important Notes
+
+### Generated Files — Do NOT Commit
+
+The following files are generated during terraform plan and policy evaluation. They are already in `.gitignore` and should never be committed:
+
+- `tfplan.bin` — Terraform binary plan
+- `tfplan.json` — Terraform JSON plan
+- `policy-report.md` — Generated policy report
+- `.terraform/` — Terraform provider cache
+- `*.tfstate` — Terraform state files
+
+### Pipeline Failure Is Expected
+
+The demo infrastructure (`terraform/demo/main.tf`) is **intentionally non-compliant**. The pipeline **will fail** during the Policy Check stage. This is the correct and expected behavior — it proves the policy gate works.
 
 ---
 
@@ -284,3 +298,6 @@ az storage entity query \
 | PR comment not posted | Ensure `System.AccessToken` has contribute-to-PR permission |
 | Table Storage write fails | Check `AZURE_STORAGE_CONNECTION_STRING` is correct |
 | SP authentication fails | Verify `ARM_*` variables match the SP credentials |
+| `TerraformInstaller@1` not found | Pipeline uses shell install by default; no extension needed |
+| Workload Identity Federation fails | Use manual SP key authentication instead (Step 5) |
+| YAML parsing errors | Ensure variables section uses list syntax (`- name: ... value: ...`) |

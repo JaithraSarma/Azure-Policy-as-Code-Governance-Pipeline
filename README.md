@@ -228,28 +228,28 @@ python -m policy_engine.main tests/fixtures/demo_plan.json
 Expected output:
 
 ```
-════════════════════════════════════════════════════════════
-  Azure Policy Gate — Evaluating tests/fixtures/demo_plan.json
-════════════════════════════════════════════════════════════
+============================================================
+  Azure Policy Gate -- Evaluating tests/fixtures/demo_plan.json
+============================================================
 
-Scanned 6 resources — 14 violation(s) found (HIGH: 11, MEDIUM: 4, LOW: 0)
+Scanned 6 resources — 14 violation(s) found (HIGH: 10, MEDIUM: 4, LOW: 0)
 
-  🔴 [PUBLIC_STORAGE] azurerm_storage_account.demo
+  [!!] [PUBLIC_STORAGE] azurerm_storage_account.demo
       Storage account has public_network_access_enabled = true. ...
 
-  🔴 [REQUIRED_TAGS] azurerm_resource_group.demo
+  [!!] [REQUIRED_TAGS] azurerm_resource_group.demo
       Resource is missing required tag(s): cost-centre, owner. ...
 
-  🔴 [NSG_SSH_OPEN] azurerm_network_security_rule.allow_ssh
+  [!!] [NSG_SSH_OPEN] azurerm_network_security_rule.allow_ssh
       NSG rule allows inbound SSH (port 22) from the public internet. ...
 
-  🟡 [NAMING_CONVENTION] azurerm_resource_group.demo
+  [!] [NAMING_CONVENTION] azurerm_resource_group.demo
       Resource name 'DemoResourceGroup' does not match the required naming convention ...
 
-  🔴 [DISK_ENCRYPTION] azurerm_managed_disk.demo
+  [!!] [DISK_ENCRYPTION] azurerm_managed_disk.demo
       Managed disk does not have encryption configured. ...
 
-⛔ HIGH severity violations detected — pipeline FAILED.
+[FAIL] HIGH severity violations detected -- pipeline FAILED.
 ```
 
 ### 4. Deploy Backend Infrastructure
@@ -320,6 +320,49 @@ When violations are found, the engine posts a comment like this:
 > | 5 | 🔴 HIGH | `DISK_ENCRYPTION` | `azurerm_managed_disk.demo` | Managed disk does not have encryption configured... |
 >
 > ⛔ **This PR is blocked.** Fix all HIGH-severity violations before merging.
+
+---
+
+## ⚠️ Expected Pipeline Behavior
+
+> **The demo Terraform infrastructure is intentionally non-compliant.** The Azure DevOps pipeline is expected to **FAIL** during the Policy Check stage when HIGH severity violations are detected.
+
+This is **by design** and validates:
+
+- ✅ **Policy-as-code enforcement** — the engine correctly identifies violations
+- ✅ **Governance controls** — HIGH severity findings trigger pipeline failure
+- ✅ **PR blocking behavior** — non-compliant PRs cannot be merged
+- ✅ **Compliance scanning workflows** — violations are logged to Table Storage
+
+### Actual Violation Output
+
+When the policy engine runs against the demo infrastructure, this is the real output:
+
+```
+  [!!] [PUBLIC_STORAGE] azurerm_storage_account.demo
+      Storage account has public_network_access_enabled = true.
+      Disable public access to prevent data exposure.
+
+  [!!] [REQUIRED_TAGS] azurerm_resource_group.demo
+      Resource is missing required tag(s): cost-centre, owner.
+      All resources must have: cost-centre, env, owner, project.
+
+  [!!] [NSG_SSH_OPEN] azurerm_network_security_rule.allow_ssh
+      NSG rule allows inbound SSH (port 22) from the public internet.
+      Restrict source_address_prefix to a known CIDR.
+
+  [!] [NAMING_CONVENTION] azurerm_resource_group.demo
+      Resource name 'DemoResourceGroup' does not match the required
+      naming convention: rg-<workload> (lowercase, hyphens allowed).
+
+  [!!] [DISK_ENCRYPTION] azurerm_managed_disk.demo
+      Managed disk does not have encryption configured.
+      Set disk_encryption_set_id or enable encryption_settings.
+
+[FAIL] HIGH severity violations detected -- pipeline FAILED.
+```
+
+To make the pipeline **pass**, fix the violations in `terraform/demo/main.tf` (add required tags, disable public access, restrict SSH source, fix naming, enable encryption).
 
 ---
 

@@ -50,20 +50,21 @@ stages:
           - checkout: self
             fetchDepth: 1
 
-          # ── Install Terraform ────────────────────────────────────────
+          # ── Install Terraform (shell-based — no marketplace dependency) ──
           - script: |
-              curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-              sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-              sudo apt-get update
-              sudo apt-get install -y terraform
+              TERRAFORM_VERSION=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | python3 -c "import sys,json; print(json.load(sys.stdin)['current_version'])")
+              echo "Installing Terraform ${TERRAFORM_VERSION}"
+              curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o terraform.zip
+              unzip -o terraform.zip -d /usr/local/bin/
+              rm terraform.zip
               terraform version
-            displayName: "Install Terraform CLI"
-         
+            displayName: "Install Terraform (latest)"
+
           # ── Terraform Init ───────────────────────────────────────────
           - script: |
               terraform init \
                 -backend-config="resource_group_name=rg-policy-gate-backend" \
-                -backend-config="storage_account_name=stpolicygatejaith01" \
+                -backend-config="storage_account_name=<YOUR_STORAGE_ACCOUNT_NAME>" \
                 -backend-config="container_name=tfstate" \
                 -backend-config="key=demo.terraform.tfstate" \
                 -input=false
