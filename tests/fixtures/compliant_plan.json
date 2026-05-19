@@ -1,0 +1,86 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "azurerm_resource_group.compliant",
+          "type": "azurerm_resource_group",
+          "name": "compliant",
+          "values": {
+            "name": "rg-compliant-app",
+            "location": "eastus",
+            "tags": {
+              "owner": "platform-team",
+              "env": "prod",
+              "project": "compliant-app",
+              "cost-centre": "CC-100"
+            }
+          }
+        },
+        {
+          "address": "azurerm_storage_account.compliant",
+          "type": "azurerm_storage_account",
+          "name": "compliant",
+          "values": {
+            "name": "stcompliantapp",
+            "location": "eastus",
+            "account_tier": "Standard",
+            "account_replication_type": "GRS",
+            "public_network_access_enabled": false,
+            "allow_nested_items_to_be_public": false,
+            "network_rules": [
+              {
+                "default_action": "Deny",
+                "bypass": ["AzureServices"],
+                "ip_rules": [],
+                "virtual_network_subnet_ids": []
+              }
+            ],
+            "tags": {
+              "owner": "platform-team",
+              "env": "prod",
+              "project": "compliant-app",
+              "cost-centre": "CC-100"
+            }
+          }
+        },
+        {
+          "address": "azurerm_network_security_group.compliant",
+          "type": "azurerm_network_security_group",
+          "name": "compliant",
+          "values": {
+            "name": "nsg-compliant-app",
+            "location": "eastus",
+            "tags": {
+              "owner": "platform-team",
+              "env": "prod",
+              "project": "compliant-app",
+              "cost-centre": "CC-100"
+            }
+          }
+        },
+        {
+          "address": "azurerm_managed_disk.compliant",
+          "type": "azurerm_managed_disk",
+          "name": "compliant",
+          "values": {
+            "name": "disk-compliant-app",
+            "location": "eastus",
+            "storage_account_type": "Premium_LRS",
+            "create_option": "Empty",
+            "disk_size_gb": 128,
+            "disk_encryption_set_id": "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/diskEncryptionSets/des-prod",
+            "tags": {
+              "owner": "platform-team",
+              "env": "prod",
+              "project": "compliant-app",
+              "cost-centre": "CC-100"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
