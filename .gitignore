@@ -38,3 +38,10 @@ Thumbs.db
 # Environment
 .env
 *.env
+
+terraform/demo/tfplan.bin
+terraform/demo/tfplan.json
+policy-report.md
+.terraform/
+*.tfstate
+*.tfstate.backup
