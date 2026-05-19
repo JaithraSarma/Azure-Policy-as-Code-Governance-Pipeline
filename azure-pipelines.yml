@@ -25,6 +25,7 @@ pool:
   vmImage: "ubuntu-latest"
 
 variables:
+  - group: policy-gate-vars
   # ── Terraform ───────────────────────────────────────────────────────
   TF_WORKING_DIR: "terraform/demo"
   ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
