@@ -64,7 +64,7 @@ stages:
           - script: |
               terraform init \
                 -backend-config="resource_group_name=rg-policy-gate-backend" \
-                -backend-config="storage_account_name=stpolicygatestate" \
+                -backend-config="storage_account_name=stpolicygatejaith01" \
                 -backend-config="container_name=tfstate" \
                 -backend-config="key=demo.terraform.tfstate" \
                 -input=false
