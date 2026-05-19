@@ -26,12 +26,15 @@ pool:
 
 variables:
   - group: policy-gate-vars
-  # ── Terraform ───────────────────────────────────────────────────────
-  TF_WORKING_DIR: "terraform/demo"
-  ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-  ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+  - name: TF_WORKING_DIR
+    value: "terraform/demo"
+
+  - name: PYTHON_VERSION
+    value: "3.11"
+
+  - name: VIOLATIONS_TABLE_NAME
+    value: "PolicyViolations"
 
   # ── Policy Engine ──────────────────────────────────────────────────
   PYTHON_VERSION: "3.11"
