@@ -1,0 +1,103 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "azurerm_resource_group.demo",
+          "type": "azurerm_resource_group",
+          "name": "demo",
+          "values": {
+            "name": "DemoResourceGroup",
+            "location": "eastus",
+            "tags": {
+              "env": "dev",
+              "project": "demo"
+            }
+          }
+        },
+        {
+          "address": "azurerm_storage_account.demo",
+          "type": "azurerm_storage_account",
+          "name": "demo",
+          "values": {
+            "name": "DEMOPUBLICSTORAGE123",
+            "location": "eastus",
+            "account_tier": "Standard",
+            "account_replication_type": "LRS",
+            "public_network_access_enabled": true,
+            "allow_nested_items_to_be_public": true,
+            "network_rules": [
+              {
+                "default_action": "Allow",
+                "bypass": ["AzureServices"],
+                "ip_rules": [],
+                "virtual_network_subnet_ids": []
+              }
+            ],
+            "tags": {
+              "project": "demo"
+            }
+          }
+        },
+        {
+          "address": "azurerm_network_security_group.demo",
+          "type": "azurerm_network_security_group",
+          "name": "demo",
+          "values": {
+            "name": "nsg-demo",
+            "location": "eastus",
+            "tags": {
+              "owner": "demo-team",
+              "env": "dev",
+              "project": "demo",
+              "cost-centre": "CC-000"
+            }
+          }
+        },
+        {
+          "address": "azurerm_network_security_rule.allow_ssh",
+          "type": "azurerm_network_security_rule",
+          "name": "allow_ssh",
+          "values": {
+            "name": "AllowSSH",
+            "priority": 100,
+            "direction": "Inbound",
+            "access": "Allow",
+            "protocol": "Tcp",
+            "source_port_range": "*",
+            "destination_port_range": "22",
+            "source_address_prefix": "0.0.0.0/0",
+            "destination_address_prefix": "*"
+          }
+        },
+        {
+          "address": "azurerm_managed_disk.demo",
+          "type": "azurerm_managed_disk",
+          "name": "demo",
+          "values": {
+            "name": "MyDemoDisk",
+            "location": "eastus",
+            "storage_account_type": "Standard_LRS",
+            "create_option": "Empty",
+            "disk_size_gb": 10,
+            "tags": {
+              "env": "dev"
+            }
+          }
+        },
+        {
+          "address": "azurerm_virtual_network.demo",
+          "type": "azurerm_virtual_network",
+          "name": "demo",
+          "values": {
+            "name": "MyVNET",
+            "location": "eastus",
+            "address_space": ["10.0.0.0/16"]
+          }
+        }
+      ]
+    }
+  }
+}
