@@ -26,7 +26,7 @@ resource "azurerm_resource_group" "demo" {
 #                   ❌ VIOLATION: Naming convention (should start with 'st')
 # ---------------------------------------------------------------------------
 resource "azurerm_storage_account" "demo" {
-  name                          = "DEMOPUBLICSTORAGE123"  # ← naming violation
+  name                          = "demopublicstorage123"  # ← naming violation
   resource_group_name           = azurerm_resource_group.demo.name
   location                      = azurerm_resource_group.demo.location
   account_tier                  = "Standard"
