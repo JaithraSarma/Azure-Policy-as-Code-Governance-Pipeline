@@ -45,3 +45,10 @@ policy-report.md
 .terraform/
 *.tfstate
 *.tfstate.backup
+.env.*
+*.pem
+*.key
+*.tfvars
+terraform.exe
+*.tfstate*
+node_modules/
