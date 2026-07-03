@@ -1,0 +1,16 @@
+# Sample Terraform variables for Azure Policy Gate Backend Infrastructure
+# Copy this file to 'terraform.tfvars' and update the values as necessary.
+
+# Azure region for resources
+location            = "eastus"
+
+# Resource Group name
+resource_group_name = "rg-policy-gate-backend"
+
+# Globally unique Azure Storage Account name (3-24 lowercase letters/numbers only)
+# IMPORTANT: This must be changed to a unique name.
+storage_account_name = "stpolicygate12345"
+
+# Metadata tags
+owner       = "platform-engineering"
+cost_centre = "CC-001"

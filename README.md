@@ -252,13 +252,37 @@ Scanned 6 resources — 14 violation(s) found (HIGH: 10, MEDIUM: 4, LOW: 0)
 [FAIL] HIGH severity violations detected -- pipeline FAILED.
 ```
 
-### 4. Deploy Backend Infrastructure
+### 4. Deploy Backend Infrastructure & Remote State
 
-```bash
-cd terraform/backend
-terraform init
-terraform apply -auto-approve
-```
+1. **Deploy Backend Resources**:
+   ```bash
+   cd terraform/backend
+   terraform init
+   terraform apply
+   ```
+   *Note: Terraform will prompt you to enter a globally unique `storage_account_name`.*
+
+2. **Retrieve Storage Account Name**:
+   Confirm the name of the created storage account by running:
+   ```bash
+   terraform output storage_account_name
+   ```
+
+3. **Configure Demo Remote Backend**:
+   Copy the backend variables template in the demo folder:
+   ```bash
+   cd ../demo
+   cp backend.tfvars.example backend.tfvars
+   ```
+
+4. **Update `backend.tfvars`**:
+   Open `backend.tfvars` and update `storage_account_name` with the exact storage account name retrieved in Step 2.
+
+5. **Initialize Demo Infrastructure**:
+   Initialize the configuration with the backend parameters:
+   ```bash
+   terraform init -backend-config=backend.tfvars
+   ```
 
 ### 5. Configure Azure DevOps
 

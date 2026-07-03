@@ -1,0 +1,15 @@
+# Backend configuration parameters for Azure Policy Gate Demo Infrastructure
+# Copy this file to 'backend.tfvars' and update the values before running 'terraform init'.
+
+# Resource Group name where the backend infrastructure resides
+resource_group_name  = "rg-policy-gate-backend"
+
+# Globally unique storage account name created by terraform/backend
+# Run 'terraform output storage_account_name' in the backend directory to find this value
+storage_account_name = "stpolicygate12345"
+
+# Blob container name for Terraform remote state
+container_name       = "tfstate"
+
+# State file key/name in the container
+key                  = "demo.tfstate"

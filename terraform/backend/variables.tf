@@ -13,7 +13,6 @@ variable "resource_group_name" {
 variable "storage_account_name" {
   description = "Globally unique name for the Storage Account (3-24 lowercase alphanumeric)."
   type        = string
-  default     = "stpolicygate<unique>"
 
   validation {
     condition     = can(regex("^[a-z0-9]{3,24}$", var.storage_account_name))
