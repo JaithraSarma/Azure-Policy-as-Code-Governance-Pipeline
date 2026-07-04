@@ -6,12 +6,12 @@ Implement a post-evaluation exemptions system using a separate `exemptions.yml` 
 
 1. **Exemptions File (`exemptions.yml`)**:
    - Location: root of the workspace.
-   - Format: dictionary mapping `resource_address` -> `rule_id` -> `reason` (supports both a direct string reason, or a dictionary containing a `reason` key).
+   - Format: dictionary mapping `resource_address` -> `rule_id` -> `reason` (supports both a direct string reason, or a dictionary containing a `reason` key, normalized internally to `dict[str, dict[str, Any]]` for future extensibility).
    - Validation:
      - Reject missing reasons or empty strings.
      - Reject unknown rule IDs (must match one of the registered rule IDs).
      - Reject malformed structures.
-     - Reject unknown resource addresses (must check if the address exists in the plan being evaluated).
+     - Reject unknown resource addresses (validated during applying exemptions against the resources in the plan).
 
 2. **Decoupled Architecture**:
    - Loaded and validated in a dedicated module `policy_engine/exemptions.py`.
@@ -30,7 +30,7 @@ policy_engine/engine.py (evaluate_plan)
       ↓
 Rule evaluation
       ↓
-Apply exemptions (flag Violation.exempted = True)
+Apply exemptions & validate resource addresses exist (apply_exemptions)
       ↓
 aggregated PolicyResult
 ```
@@ -48,8 +48,8 @@ aggregated PolicyResult
 
 ### New Module `policy_engine/exemptions.py`
 - Exposes `ExemptionConfigError`.
-- Exposes `load_exemptions(config_path: Path | str | None, plan_resources: list[str]) -> dict[str, dict[str, str]]`.
-- Exposes `apply_exemptions(violations: list[Violation], exemptions: dict[str, dict[str, str]]) -> None`.
+- Exposes `load_exemptions(config_path: Path | str | None) -> dict[str, dict[str, Any]]`.
+- Exposes `apply_exemptions(violations: list[Violation], exemptions: dict[str, dict[str, Any]], plan_resources: list[str]) -> None`.
 
 ### Reporter Updates (`policy_engine/reporter.py`)
 - Update PR markdown formatter to display exempted violations in a separate table/section labeled "Exempted Violations" rather than treating them as blocking errors.
