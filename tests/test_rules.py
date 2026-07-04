@@ -367,7 +367,7 @@ class TestEngine:
 
     def test_demo_plan_has_violations(self):
         result = evaluate_plan(str(FIXTURES / "demo_plan.json"))
-        assert result.resources_scanned == 6
+        assert result.resources_scanned == 10
         assert len(result.violations) > 0
         assert result.has_high_severity is True
 
@@ -385,11 +385,13 @@ class TestEngine:
         assert "NSG_SSH_OPEN" in rule_ids
         assert "NAMING_CONVENTION" in rule_ids
         assert "DISK_ENCRYPTION" in rule_ids
+        assert "SQL_FIREWALL_OPEN" in rule_ids
+        assert "HTTPS_ONLY" in rule_ids
 
     def test_evaluate_plan_dict(self):
         plan = load_fixture("demo_plan.json")
         result = evaluate_plan_dict(plan)
-        assert result.resources_scanned == 6
+        assert result.resources_scanned == 10
         assert len(result.violations) > 0
 
 

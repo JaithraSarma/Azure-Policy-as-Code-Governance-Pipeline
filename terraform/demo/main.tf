@@ -114,24 +114,62 @@ resource "azurerm_virtual_network" "demo" {
 }
 
 # ---------------------------------------------------------------------------
-# MSSQL Firewall Rule — ❌ VIOLATION: SQL_FIREWALL_OPEN (0.0.0.0)
+# MSSQL Server & Firewall Rule — ❌ VIOLATION: SQL_FIREWALL_OPEN (0.0.0.0)
 # ---------------------------------------------------------------------------
+resource "azurerm_mssql_server" "demo" {
+  name                         = "sqlpolicydemo123"
+  resource_group_name          = azurerm_resource_group.demo.name
+  location                     = azurerm_resource_group.demo.location
+  version                      = "12.0"
+  administrator_login          = "sqladminuser"
+  administrator_login_password = "P@ssw0rd123456!"
+
+  tags = {
+    owner       = "demo-team"
+    env         = "dev"
+    project     = "demo"
+    cost-centre = "CC-000"
+  }
+}
+
 resource "azurerm_mssql_firewall_rule" "open_sql" {
-  name             = "allow-all"
-  server_id        = "fake-server-id"
+  name             = "AllowAll"
+  server_id        = azurerm_mssql_server.demo.id
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
 }
 
 # ---------------------------------------------------------------------------
-# Linux Web App — ❌ VIOLATION: HTTPS_ONLY
+# App Service Plan & Linux Web App — ❌ VIOLATION: HTTPS_ONLY
 # ---------------------------------------------------------------------------
-resource "azurerm_linux_web_app" "non_https" {
-  name                = "non-https-app"
+resource "azurerm_service_plan" "demo" {
+  name                = "asp-demo"
   resource_group_name = azurerm_resource_group.demo.name
   location            = azurerm_resource_group.demo.location
-  service_plan_id     = "fake-service-plan-id"
+  os_type             = "Linux"
+  sku_name            = "B1"
+
+  tags = {
+    owner       = "demo-team"
+    env         = "dev"
+    project     = "demo"
+    cost-centre = "CC-000"
+  }
+}
+
+resource "azurerm_linux_web_app" "non_https" {
+  name                = "policy-demo-webapp-12345"
+  resource_group_name = azurerm_resource_group.demo.name
+  location            = azurerm_resource_group.demo.location
+  service_plan_id     = azurerm_service_plan.demo.id
   https_only          = false
 
   site_config {}
+
+  tags = {
+    owner       = "demo-team"
+    env         = "dev"
+    project     = "demo"
+    cost-centre = "CC-000"
+  }
 }
