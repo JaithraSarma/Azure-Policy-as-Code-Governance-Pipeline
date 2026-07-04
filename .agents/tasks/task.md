@@ -1,4 +1,0 @@
-- [ ] Refactor `azure-pipelines.yml` to use `AzureCLI@2` and `azure-policy-gate-sc`
-- [ ] Remove `policy-gate-vars` group and environment secrets from `azure-pipelines.yml`
-- [ ] Add proper exit code handling to the `terraform plan` step in `azure-pipelines.yml`
-- [ ] Verify pipeline syntax/configurations
