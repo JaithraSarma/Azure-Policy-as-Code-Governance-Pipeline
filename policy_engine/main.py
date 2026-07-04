@@ -19,6 +19,7 @@ from policy_engine.reporter import format_markdown, post_pr_comment, log_to_tabl
 
 
 from policy_engine.config import PolicyConfigError
+from policy_engine.exemptions import ExemptionConfigError
 
 
 def _safe_print(*args, **kwargs):
@@ -60,6 +61,9 @@ def main() -> int:
     except PolicyConfigError as exc:
         _safe_print(f"Configuration Error: {exc}", file=sys.stderr)
         return 2
+    except ExemptionConfigError as exc:
+        _safe_print(f"Exemption Error: {exc}", file=sys.stderr)
+        return 2
     except Exception as exc:
         _safe_print(f"Error evaluating plan: {exc}", file=sys.stderr)
         return 2
@@ -71,8 +75,12 @@ def main() -> int:
     for v in result.violations:
         sev = v.severity.value
         icon = {"HIGH": "[!!]", "MEDIUM": "[!]", "LOW": "[i]"}.get(sev, "[?]")
+        if v.exempted:
+            icon = "[EXEMPTED]"
         _safe_print(f"  {icon} [{v.rule_id}] {v.resource_address}")
         _safe_print(f"      {v.message}")
+        if v.exempted and v.exemption_reason:
+            _safe_print(f"      Exemption reason: {v.exemption_reason}")
         _safe_print()
 
     # -- Markdown output (also written to file for pipeline artifact) --

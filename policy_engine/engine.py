@@ -69,12 +69,14 @@ def _extract_resources(plan: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 from policy_engine.config import load_policy_config, apply_config_to_rules
+from policy_engine.exemptions import load_exemptions, apply_exemptions
 
 
 def evaluate_plan(
     plan_path: str | Path,
     rules: list[PolicyRule] | None = None,
     config_path: str | Path | None = "policy.yml",
+    exemptions_path: str | Path | None = "exemptions.yml",
 ) -> PolicyResult:
     """
     Evaluate a Terraform plan JSON file against all policy rules.
@@ -83,6 +85,7 @@ def evaluate_plan(
         plan_path: Path to the tfplan.json file.
         rules:     Optional list of rules to run (defaults to ALL_RULES).
         config_path: Optional path to the configuration YAML file.
+        exemptions_path: Optional path to the exemptions YAML file.
 
     Returns:
         A PolicyResult with all violations and scan metadata.
@@ -94,16 +97,30 @@ def evaluate_plan(
     # Load config exactly once at startup (outermost layer of file reading)
     config = load_policy_config(config_path)
 
-    return evaluate_plan_dict(plan, rules=rules, config=config)
+    # Load exemptions exactly once at startup
+    exemptions = load_exemptions(exemptions_path)
+
+    resources = _extract_resources(plan)
+    plan_resources = [res["address"] for res in resources]
+
+    return evaluate_plan_dict(
+        plan,
+        rules=rules,
+        config=config,
+        exemptions=exemptions,
+        plan_resources=plan_resources,
+    )
 
 
 def evaluate_plan_dict(
     plan: dict[str, Any],
     rules: list[PolicyRule] | None = None,
     config: dict[str, Any] | None = None,
+    exemptions: dict[str, dict[str, Any]] | None = None,
+    plan_resources: list[str] | None = None,
 ) -> PolicyResult:
     """
-    Same as evaluate_plan but accepts an already-parsed dict and config object.
+    Same as evaluate_plan but accepts an already-parsed dict, config, and exemptions.
     Useful for testing without hitting the filesystem.
     """
     import copy
@@ -139,6 +156,12 @@ def evaluate_plan_dict(
                         v.severity = severity_override
 
             all_violations.extend(violations)
+
+    # Apply exemptions and validate resource existence after evaluation
+    if exemptions:
+        if plan_resources is None:
+            plan_resources = [res["address"] for res in resources]
+        apply_exemptions(all_violations, exemptions, plan_resources)
 
     result = PolicyResult(
         violations=all_violations,

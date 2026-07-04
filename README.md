@@ -126,6 +126,31 @@ If the configuration file is malformed or defines unsupported parameters (e.g. u
 
 ---
 
+## Exemptions System
+
+You can exempt specific resource addresses from individual policy rules by defining them in an `exemptions.yml` file at the root of the repository.
+
+Exempted violations are excluded from the pipeline's pass/fail decision (i.e., they will not fail the pipeline even if they are HIGH severity), but they are still logged to Azure Table Storage (with `Exempted=True` and the documented reason) and displayed in the PR violation report for audit trail purposes.
+
+### Example `exemptions.yml`
+
+```yaml
+exemptions:
+  azurerm_storage_account.demo:
+    PUBLIC_STORAGE: "Dev sandbox allowed to be public for testing"
+    REQUIRED_TAGS:
+      reason: "Legacy resource missing owner tag"
+```
+
+### Strict Validation
+
+To prevent silent misconfiguration and configuration drift, the engine enforces the following constraints during evaluation:
+- **No bare suppressions**: Every exemption must specify a non-empty `reason`.
+- **Known Rule IDs**: Exemptions must reference active, registered rule IDs.
+- **Resource Existence**: Any resource address defined in `exemptions.yml` **must** exist in the current Terraform plan being evaluated. If a resource is deleted or renamed but the exemption is not removed from `exemptions.yml`, the pipeline will fail with an `ExemptionConfigError`.
+
+---
+
 ## Repository Structure
 
 ```
@@ -526,7 +551,6 @@ Here are concrete enhancements you could add to this project:
 
 | Enhancement | Description |
 |-------------|-------------|
-| **Exemptions system** | Allow teams to exempt specific resources from specific rules with documented justification (`# policy:ignore RULE_ID`) |
 | **Trend dashboard** | Build a Power BI or Grafana dashboard on top of Table Storage to track violation trends per team/project |
 | **Slack/Teams notifications** | Send violation summaries to a Teams channel via incoming webhook |
 | **Cost estimation** | Integrate `infracost` to add estimated monthly cost to the PR comment |

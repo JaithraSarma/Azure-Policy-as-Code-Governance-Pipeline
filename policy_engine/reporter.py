@@ -44,14 +44,19 @@ def format_markdown(result: PolicyResult) -> str:
     lines.append("|---|----------|------|----------|---------|")
 
     for idx, v in enumerate(result.violations, 1):
-        sev_icon = {
-            "HIGH": "🔴 HIGH",
-            "MEDIUM": "🟡 MEDIUM",
-            "LOW": "🟢 LOW",
-        }.get(v.severity.value, v.severity.value)
+        if v.exempted:
+            sev_icon = f"⚪ EXEMPTED ({v.severity.value})"
+        else:
+            sev_icon = {
+                "HIGH": "🔴 HIGH",
+                "MEDIUM": "🟡 MEDIUM",
+                "LOW": "🟢 LOW",
+            }.get(v.severity.value, v.severity.value)
 
         # Truncate long messages for the table
         msg = v.message[:120] + "…" if len(v.message) > 120 else v.message
+        if v.exempted and v.exemption_reason:
+            msg += f" *(Exemption Reason: {v.exemption_reason})*"
         lines.append(
             f"| {idx} | {sev_icon} | `{v.rule_id}` | `{v.resource_address}` | {msg} |"
         )
@@ -193,6 +198,8 @@ def log_to_table_storage(
                 "Severity": v.severity.value,
                 "Message": v.message,
                 "Details": json.dumps(v.details),
+                "Exempted": v.exempted,
+                "ExemptionReason": v.exemption_reason or "",
             }
             client.upsert_entity(entity)
 

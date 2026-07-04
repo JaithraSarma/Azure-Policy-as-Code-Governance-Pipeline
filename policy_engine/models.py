@@ -24,6 +24,8 @@ class Violation:
     severity: Severity
     message: str
     details: dict[str, Any] = field(default_factory=dict)
+    exempted: bool = False
+    exemption_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a flat dictionary (suitable for Table Storage)."""
@@ -34,6 +36,8 @@ class Violation:
             "severity": self.severity.value,
             "message": self.message,
             "details": str(self.details),
+            "exempted": self.exempted,
+            "exemption_reason": self.exemption_reason or "",
         }
 
 
@@ -47,7 +51,7 @@ class PolicyResult:
     @property
     def has_high_severity(self) -> bool:
         """Return True if any HIGH severity violations exist."""
-        return any(v.severity == Severity.HIGH for v in self.violations)
+        return any(v.severity == Severity.HIGH and not v.exempted for v in self.violations)
 
     @property
     def summary(self) -> str:
