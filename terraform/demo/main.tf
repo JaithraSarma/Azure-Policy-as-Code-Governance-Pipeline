@@ -112,3 +112,26 @@ resource "azurerm_virtual_network" "demo" {
 
   # No tags at all
 }
+
+# ---------------------------------------------------------------------------
+# MSSQL Firewall Rule — ❌ VIOLATION: SQL_FIREWALL_OPEN (0.0.0.0)
+# ---------------------------------------------------------------------------
+resource "azurerm_mssql_firewall_rule" "open_sql" {
+  name             = "allow-all"
+  server_id        = "fake-server-id"
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+# ---------------------------------------------------------------------------
+# Linux Web App — ❌ VIOLATION: HTTPS_ONLY
+# ---------------------------------------------------------------------------
+resource "azurerm_linux_web_app" "non_https" {
+  name                = "non-https-app"
+  resource_group_name = azurerm_resource_group.demo.name
+  location            = azurerm_resource_group.demo.location
+  service_plan_id     = "fake-service-plan-id"
+  https_only          = false
+
+  site_config {}
+}

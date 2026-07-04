@@ -10,6 +10,8 @@ from policy_engine.rules.required_tags import RequiredTagsRule
 from policy_engine.rules.nsg_ssh_open import NsgSshOpenRule
 from policy_engine.rules.naming_convention import NamingConventionRule
 from policy_engine.rules.disk_encryption import DiskEncryptionRule
+from policy_engine.rules.sql_firewall_open import SqlFirewallOpenRule
+from policy_engine.rules.https_only import HttpsOnlyRule
 
 # Master list used by the engine — order does not matter.
 ALL_RULES: list[PolicyRule] = [
@@ -18,6 +20,8 @@ ALL_RULES: list[PolicyRule] = [
     NsgSshOpenRule(),
     NamingConventionRule(),
     DiskEncryptionRule(),
+    SqlFirewallOpenRule(),
+    HttpsOnlyRule(),
 ]
 
 __all__ = [
@@ -27,5 +31,7 @@ __all__ = [
     "NsgSshOpenRule",
     "NamingConventionRule",
     "DiskEncryptionRule",
+    "SqlFirewallOpenRule",
+    "HttpsOnlyRule",
     "ALL_RULES",
 ]

@@ -21,6 +21,8 @@ from policy_engine.rules.required_tags import RequiredTagsRule
 from policy_engine.rules.nsg_ssh_open import NsgSshOpenRule
 from policy_engine.rules.naming_convention import NamingConventionRule
 from policy_engine.rules.disk_encryption import DiskEncryptionRule
+from policy_engine.rules.sql_firewall_open import SqlFirewallOpenRule
+from policy_engine.rules.https_only import HttpsOnlyRule
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -447,3 +449,112 @@ class TestModels:
         result = PolicyResult()
         assert result.has_high_severity is False
         assert "0 violation(s)" in result.summary
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Rule 6 — SQL_FIREWALL_OPEN
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestSqlFirewallOpenRule:
+    rule = SqlFirewallOpenRule()
+
+    def test_allow_azure_services_fails(self):
+        """0.0.0.0 -> 0.0.0.0 (Azure services) must fail."""
+        violations = self.rule.evaluate(
+            "azurerm_mssql_firewall_rule.demo",
+            "azurerm_mssql_firewall_rule",
+            {"start_ip_address": "0.0.0.0", "end_ip_address": "0.0.0.0"},
+        )
+        assert len(violations) == 1
+        assert violations[0].severity == Severity.HIGH
+        assert violations[0].rule_id == "SQL_FIREWALL_OPEN"
+
+    def test_allow_entire_internet_fails(self):
+        """0.0.0.0 -> 255.255.255.255 (entire internet) must fail."""
+        violations = self.rule.evaluate(
+            "azurerm_sql_firewall_rule.demo",
+            "azurerm_sql_firewall_rule",
+            {"start_ip_address": "0.0.0.0", "end_ip_address": "255.255.255.255"},
+        )
+        assert len(violations) == 1
+        assert violations[0].severity == Severity.HIGH
+
+    def test_wildcard_rule_fails(self):
+        """Wildcards in either address must fail."""
+        violations_start = self.rule.evaluate(
+            "azurerm_sql_firewall_rule.demo",
+            "azurerm_sql_firewall_rule",
+            {"start_ip_address": "*", "end_ip_address": "1.2.3.4"},
+        )
+        assert len(violations_start) == 1
+
+        violations_end = self.rule.evaluate(
+            "azurerm_sql_firewall_rule.demo",
+            "azurerm_sql_firewall_rule",
+            {"start_ip_address": "1.2.3.4", "end_ip_address": "*"},
+        )
+        assert len(violations_end) == 1
+
+    def test_restricted_ip_range_passes(self):
+        """Restricted IP ranges (e.g. corporate CIDRs) must pass."""
+        violations = self.rule.evaluate(
+            "azurerm_sql_firewall_rule.demo",
+            "azurerm_sql_firewall_rule",
+            {"start_ip_address": "192.168.1.1", "end_ip_address": "192.168.1.10"},
+        )
+        assert violations == []
+
+    def test_ignores_non_sql_firewall(self):
+        """Rule should only check SQL firewall resources."""
+        violations = self.rule.evaluate(
+            "azurerm_resource_group.rg",
+            "azurerm_resource_group",
+            {"start_ip_address": "0.0.0.0", "end_ip_address": "0.0.0.0"},
+        )
+        assert violations == []
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Rule 7 — HTTPS_ONLY
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestHttpsOnlyRule:
+    rule = HttpsOnlyRule()
+
+    def test_https_only_disabled_fails(self):
+        """https_only set to false must fail."""
+        violations = self.rule.evaluate(
+            "azurerm_linux_web_app.demo",
+            "azurerm_linux_web_app",
+            {"https_only": False},
+        )
+        assert len(violations) == 1
+        assert violations[0].severity == Severity.HIGH
+        assert violations[0].rule_id == "HTTPS_ONLY"
+
+    def test_https_only_missing_fails(self):
+        """https_only omitted must fail."""
+        violations = self.rule.evaluate(
+            "azurerm_windows_web_app.demo",
+            "azurerm_windows_web_app",
+            {},
+        )
+        assert len(violations) == 1
+
+    def test_https_only_enabled_passes(self):
+        """https_only set to true must pass."""
+        violations = self.rule.evaluate(
+            "azurerm_function_app.demo",
+            "azurerm_function_app",
+            {"https_only": True},
+        )
+        assert violations == []
+
+    def test_ignores_non_web_app(self):
+        """Rule should only check web apps."""
+        violations = self.rule.evaluate(
+            "azurerm_resource_group.rg",
+            "azurerm_resource_group",
+            {"https_only": False},
+        )
+        assert violations == []

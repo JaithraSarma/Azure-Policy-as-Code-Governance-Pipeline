@@ -20,6 +20,7 @@ from policy_engine.reporter import format_markdown, post_pr_comment, log_to_tabl
 
 from policy_engine.config import PolicyConfigError
 from policy_engine.exemptions import ExemptionConfigError
+from policy_engine.sarif import format_sarif
 
 
 def _safe_print(*args, **kwargs):
@@ -41,11 +42,24 @@ def main() -> int:
         except Exception:
             pass
 
-    if len(sys.argv) < 2:
-        _safe_print("Usage: python -m policy_engine.main <tfplan.json>", file=sys.stderr)
-        return 2
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Azure Policy Gate -- Compliance evaluation for Terraform plans.",
+        prog="python -m policy_engine.main"
+    )
+    parser.add_argument("plan_path", help="Path to the tfplan.json file.")
+    parser.add_argument(
+        "--format",
+        choices=["sarif"],
+        help="Generate an additional report in the specified format alongside the markdown report."
+    )
 
-    plan_path = sys.argv[1]
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        return e.code
+
+    plan_path = args.plan_path
 
     if not os.path.isfile(plan_path):
         _safe_print(f"Error: file not found: {plan_path}", file=sys.stderr)
@@ -89,6 +103,14 @@ def main() -> int:
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md)
     _safe_print(f"[main] Markdown report written to {md_path}")
+
+    # -- SARIF output (optional, written to file alongside markdown report) --
+    if args.format == "sarif":
+        sarif_out = format_sarif(result)
+        sarif_path = os.environ.get("POLICY_SARIF_PATH", "policy-report.sarif")
+        with open(sarif_path, "w", encoding="utf-8") as f:
+            f.write(sarif_out)
+        _safe_print(f"[main] SARIF report written to {sarif_path}")
 
     # -- PR comment (only in pipeline context) -------------------------
     post_pr_comment(result)

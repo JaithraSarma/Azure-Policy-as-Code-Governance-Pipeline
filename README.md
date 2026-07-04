@@ -91,6 +91,8 @@ PR Created → Pipeline Triggers → terraform plan → Policy Engine → PR Com
 | 3 | `NSG_SSH_OPEN` | NSG rules allowing SSH (port 22) from the internet | **HIGH** | `azurerm_network_security_rule` or inline NSG rules with `source_address_prefix = "0.0.0.0/0"` or `"*"` and `destination_port_range` including 22 |
 | 4 | `NAMING_CONVENTION` | Resource names violating Cloud Adoption Framework naming patterns | **MEDIUM** | Names not matching expected prefixes: `rg-`, `st`, `vnet-`, `nsg-`, `disk-`, `kv-`, `vm-`, `pip-`, `snet-` |
 | 5 | `DISK_ENCRYPTION` | Managed disks without encryption configured | **HIGH** | `azurerm_managed_disk` missing both `disk_encryption_set_id` and `encryption_settings` |
+| 6 | `SQL_FIREWALL_OPEN` | SQL Server firewall rules allowing unrestricted access or Azure services | **HIGH** | `azurerm_sql_firewall_rule` or `azurerm_mssql_firewall_rule` with start IP `0.0.0.0` or `*`, or end IP `255.255.255.255` or `*` |
+| 7 | `HTTPS_ONLY` | App Services / Web Apps / Function Apps without HTTPS-only enabled | **HIGH** | `azurerm_app_service`, `azurerm_linux_web_app`, `azurerm_windows_web_app`, or `azurerm_function_app` with `https_only = false` or omitted |
 
 ### Severity Behaviour
 
@@ -272,8 +274,11 @@ tests/test_rules.py::TestModels::test_empty_result                           PAS
 ### 3. Run Against a Plan Locally
 
 ```bash
-# Using the included test fixture
+# Using the included test fixture (default markdown output)
 python -m policy_engine.main tests/fixtures/demo_plan.json
+
+# Exporting an additional SARIF report alongside the markdown report
+python -m policy_engine.main tests/fixtures/demo_plan.json --format sarif
 ```
 
 Expected output:
@@ -539,8 +544,6 @@ Here are concrete enhancements you could add to this project:
 | Rule | What It Checks | Severity |
 |------|----------------|----------|
 | `KEY_VAULT_SOFT_DELETE` | Key Vault without soft-delete or purge protection | HIGH |
-| `SQL_FIREWALL_OPEN` | SQL Server firewall rules allowing 0.0.0.0 | HIGH |
-| `HTTPS_ONLY` | App Service / Function App without HTTPS-only | HIGH |
 | `PRIVATE_ENDPOINT` | Database resources without private endpoints | MEDIUM |
 | `RESOURCE_LOCKS` | Production resources without delete locks | MEDIUM |
 | `LOG_ANALYTICS` | Resources without diagnostic settings | LOW |
@@ -556,7 +559,6 @@ Here are concrete enhancements you could add to this project:
 | **Cost estimation** | Integrate `infracost` to add estimated monthly cost to the PR comment |
 | **Multi-repo support** | Publish the engine as a PyPI package and consume it from multiple repos |
 | **Caching** | Cache terraform plan output between pipeline runs when no Terraform files changed |
-| **SARIF output** | Generate SARIF format for integration with GitHub Advanced Security / Azure DevOps code scanning |
 
 ### Security Hardening
 
