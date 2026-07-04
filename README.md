@@ -100,6 +100,32 @@ PR Created → Pipeline Triggers → terraform plan → Policy Engine → PR Com
 
 ---
 
+## Policy-as-Code Configuration
+
+You can customize rule severities, enable/disable rules, and override parameters using a `policy.yml` configuration file at the repository root. If the file is absent, the engine falls back to default hardcoded rule settings.
+
+### Example `policy.yml`
+
+```yaml
+rules:
+  REQUIRED_TAGS:
+    enabled: true
+    severity: HIGH
+    parameters:
+      tags: ["owner", "env", "project", "cost-centre"]
+  NAMING_CONVENTION:
+    enabled: true
+    severity: MEDIUM
+    parameters:
+      prefixes:
+        azurerm_resource_group: "rg-"
+        azurerm_storage_account: "st"
+```
+
+If the configuration file is malformed or defines unsupported parameters (e.g. unknown keys under `parameters`), the engine will fail loudly with a `PolicyConfigError`.
+
+---
+
 ## Repository Structure
 
 ```
@@ -500,7 +526,6 @@ Here are concrete enhancements you could add to this project:
 
 | Enhancement | Description |
 |-------------|-------------|
-| **Policy-as-Code config** | Load rules and thresholds from a YAML config file (`policy.yml`) so teams can customise without touching Python |
 | **Exemptions system** | Allow teams to exempt specific resources from specific rules with documented justification (`# policy:ignore RULE_ID`) |
 | **Trend dashboard** | Build a Power BI or Grafana dashboard on top of Table Storage to track violation trends per team/project |
 | **Slack/Teams notifications** | Send violation summaries to a Teams channel via incoming webhook |

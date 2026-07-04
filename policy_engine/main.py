@@ -18,6 +18,9 @@ from policy_engine.engine import evaluate_plan
 from policy_engine.reporter import format_markdown, post_pr_comment, log_to_table_storage
 
 
+from policy_engine.config import PolicyConfigError
+
+
 def _safe_print(*args, **kwargs):
     """Print with fallback for consoles that cannot render Unicode."""
     try:
@@ -54,6 +57,9 @@ def main() -> int:
 
     try:
         result = evaluate_plan(plan_path)
+    except PolicyConfigError as exc:
+        _safe_print(f"Configuration Error: {exc}", file=sys.stderr)
+        return 2
     except Exception as exc:
         _safe_print(f"Error evaluating plan: {exc}", file=sys.stderr)
         return 2

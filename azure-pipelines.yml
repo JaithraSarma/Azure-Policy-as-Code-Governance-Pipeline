@@ -83,7 +83,18 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                terraform plan -out=tfplan.bin -input=false -detailed-exitcode || true
+                terraform plan -out=tfplan.bin -input=false -detailed-exitcode
+                PLAN_EXIT_CODE=$?
+                if [ $PLAN_EXIT_CODE -eq 1 ]; then
+                  echo "##vso[task.logissue type=error]Terraform plan failed with error."
+                  exit 1
+                elif [ $PLAN_EXIT_CODE -eq 0 ] || [ $PLAN_EXIT_CODE -eq 2 ]; then
+                  echo "Terraform plan completed successfully."
+                  exit 0
+                else
+                  echo "##vso[task.logissue type=error]Terraform plan returned unexpected exit code: $PLAN_EXIT_CODE"
+                  exit $PLAN_EXIT_CODE
+                fi
               workingDirectory: $(TF_WORKING_DIR)
             env:
               ARM_USE_CLI: "true"

@@ -29,9 +29,10 @@ class RequiredTagsRule(PolicyRule):
 
     @property
     def description(self) -> str:
+        required_tags = getattr(self, "required_tags", REQUIRED_TAGS)
         return (
             "All Azure resources must include the following tags: "
-            + ", ".join(sorted(REQUIRED_TAGS))
+            + ", ".join(sorted(required_tags))
             + "."
         )
 
@@ -49,9 +50,11 @@ class RequiredTagsRule(PolicyRule):
         # If "tags" key is absent entirely, treat as no tags
         tags = resource_values.get("tags") or {}
 
+        required_tags = getattr(self, "required_tags", REQUIRED_TAGS)
+
         # Normalise tag keys to lowercase for comparison
         existing_keys = {k.lower() for k in tags}
-        missing = REQUIRED_TAGS - existing_keys
+        missing = {t.lower() for t in required_tags} - existing_keys
 
         if not missing:
             return []
@@ -64,7 +67,7 @@ class RequiredTagsRule(PolicyRule):
                 severity=Severity.HIGH,
                 message=(
                     f"Resource is missing required tag(s): {', '.join(sorted(missing))}. "
-                    f"All resources must have: {', '.join(sorted(REQUIRED_TAGS))}."
+                    f"All resources must have: {', '.join(sorted(required_tags))}."
                 ),
                 details={"missing_tags": sorted(missing)},
             )

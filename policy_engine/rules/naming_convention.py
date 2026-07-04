@@ -76,7 +76,8 @@ class NamingConventionRule(PolicyRule):
         resource_type: str,
         resource_values: dict[str, Any],
     ) -> list[Violation]:
-        pattern_info = NAMING_PATTERNS.get(resource_type)
+        naming_patterns = getattr(self, "naming_patterns", NAMING_PATTERNS)
+        pattern_info = naming_patterns.get(resource_type)
         if pattern_info is None:
             # No naming rule defined for this type — pass
             return []
