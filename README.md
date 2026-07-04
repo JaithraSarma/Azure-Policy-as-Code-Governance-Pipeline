@@ -10,7 +10,7 @@ The problem this solves is a common gap in Terraform-based delivery: a pipeline 
 
 ## Architectural Diagram
 
-![Architectural Diagram](gemini_generated_image.png)
+![Architectural Diagram](Gemini_Generated_Image_6j5fo26j5fo26j5f.png)
 
 The engine is intentionally decoupled: rule evaluation, configuration, exemptions, and reporting are separate modules, so any one of them can change without affecting the others.
 
