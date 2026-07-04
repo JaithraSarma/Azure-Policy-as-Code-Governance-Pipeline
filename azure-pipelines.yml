@@ -141,7 +141,7 @@ stages:
 
           # ── Run policy engine ────────────────────────────────────────
           - script: |
-              python -m policy_engine.main $(Pipeline.Workspace)/tfplan/tfplan.json
+              python -m policy_engine.main $(Pipeline.Workspace)/tfplan/tfplan.json --format sarif
             displayName: "Evaluate Policies"
             env:
               # Azure DevOps PR variables (auto-populated in PR context)
@@ -154,11 +154,17 @@ stages:
               # Table Storage
               AZURE_STORAGE_CONNECTION_STRING: $(AZURE_STORAGE_CONNECTION_STRING)
               VIOLATIONS_TABLE_NAME: $(VIOLATIONS_TABLE_NAME)
-              # Report output path
+              # Report output paths
               POLICY_REPORT_PATH: $(Build.ArtifactStagingDirectory)/policy-report.md
+              POLICY_SARIF_PATH: $(Build.ArtifactStagingDirectory)/policy-report.sarif
 
           # ── Publish report ───────────────────────────────────────────
           - publish: $(Build.ArtifactStagingDirectory)/policy-report.md
             artifact: policy-report
             displayName: "Publish Policy Report"
+            condition: always()
+
+          - publish: $(Build.ArtifactStagingDirectory)/policy-report.sarif
+            artifact: policy-report-sarif
+            displayName: "Publish Policy Report (SARIF)"
             condition: always()
