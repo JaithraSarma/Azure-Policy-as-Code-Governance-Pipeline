@@ -8,26 +8,9 @@ Azure Policy Gate parses the output of `terraform plan` and evaluates every plan
 
 The problem this solves is a common gap in Terraform-based delivery: a pipeline can validate that code is syntactically correct and that a plan applies cleanly, but by default nothing evaluates whether the resulting infrastructure is actually compliant with security policy. Public storage access, open SSH rules, unencrypted disks, and missing governance tags all pass a normal `terraform plan` without issue. Azure Policy Gate closes that gap by treating the plan itself as a compliance checkpoint, so a violation is caught before the resource exists rather than discovered afterward during an audit.
 
-## How It Works
+## Architectural Diagram
 
-```
-Pull request touches terraform/**
-        |
-        v
-terraform plan  ->  terraform show -json
-        |
-        v
-Policy Engine
-   applies policy.yml overrides
-   evaluates every resource against each rule
-   applies exemptions.yml suppressions
-        |
-        v
-Markdown PR comment   Azure Table Storage log   SARIF export (optional)
-        |
-        v
-Pipeline fails only if unexempted HIGH severity violations remain
-```
+![Architectural Diagram](gemini_generated_image.png)
 
 The engine is intentionally decoupled: rule evaluation, configuration, exemptions, and reporting are separate modules, so any one of them can change without affecting the others.
 
