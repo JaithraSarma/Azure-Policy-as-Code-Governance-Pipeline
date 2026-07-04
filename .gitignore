@@ -18,8 +18,12 @@ env/
 .terraform/
 .terraform.lock.hcl
 *.tfplan
+*tfplan.bin
+*tfplan.json
+tfplan.bin
 tfplan.json
-crash.log
+**/tfplan.bin
+**/tfplan.json
 override.tf
 override.tf.json
 *_override.tf
