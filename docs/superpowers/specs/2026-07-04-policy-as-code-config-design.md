@@ -9,6 +9,7 @@ Implement a centralized YAML configuration loader to allow teams to enable/disab
    - Format: dictionary keyed by rule ID.
    - Fallback: cleanly defaults to current hardcoded values if `policy.yml` is missing.
    - Loud Failure: raises a clear, descriptive error on malformed YAML or schema validation failure.
+   - Strict Parameter Validation: Only explicitly supported parameters (e.g. `tags` for `REQUIRED_TAGS`, `prefixes` for `NAMING_CONVENTION`) are allowed; unknown parameters must fail loudly with a `PolicyConfigError`.
 
 2. **Decoupled Architecture**:
    - Rules implementation remains focused entirely on evaluation logic and has no knowledge of YAML files.
